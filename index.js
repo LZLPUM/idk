@@ -25,7 +25,7 @@ createBot()
 
 function createBot() {
   bot = mineflayer.createBot({
-    host: '42.113.140.250',
+    host: '2y2c.org',
     username: 'nahiwinhaha',
     version: '1.20.4',
     keepAlive: true,
