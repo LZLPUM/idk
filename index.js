@@ -27,7 +27,7 @@ function createBot() {
       setTimeout(() => bot.setControlState('jump', false), 300)
       const yaw = Math.random() * Math.PI * 2
       bot.look(yaw, 0, true)
-    }, 3000)
+    }, 30000)
 
     setInterval(() => {
       bot.chat('Rình Ai Tắm')
@@ -99,5 +99,3 @@ app.get('/', (req, res) => res.send('🟢 Bot đang hoạt động.'))
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`🌐 Express đang chạy tại cổng ${PORT}`))
-
-
