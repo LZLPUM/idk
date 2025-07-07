@@ -25,9 +25,9 @@ createBot()
 
 function createBot() {
   bot = mineflayer.createBot({
-    host: '2y2c.org',
+    host: 'anarchy.vn',
     username: 'nahiwinhaha',
-    version: '1.20.4',
+    version: '1.12.2',
     keepAlive: true,
     keepAliveInterval: 10000,
     timeout: 60000
@@ -73,7 +73,7 @@ function createBot() {
       }, 60000)
 
       setInterval(() => {
-        if (bot.player) bot.chat('Nhìn Nhìn Con Cặc')
+        if (bot.player) bot.chat('Ối Dồi Ôi')
       }, 10000 + Math.floor(Math.random() * 3000))
 
       console.log('🚀 Bắt đầu thực hiện các tính năng chính.')
@@ -222,3 +222,4 @@ const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`🌐 Server Express đang chạy tại cổng ${PORT}`))
 
 
+                        
