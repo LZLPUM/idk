@@ -1,8 +1,6 @@
 const mineflayer = require('mineflayer')
 const express = require('express')
 const fetch = require('node-fetch')
-const os = require('os')
-const { Vec3 } = require('vec3')
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 
@@ -13,11 +11,10 @@ function createBot() {
   bot = mineflayer.createBot({
     host: 'anarchy.vn',
     username: 'nahiwinhaha',
-    version: '1.12.2',
-    keepAlive: true
+    version: '1.12.2'
   })
 
-  bot.on('login', () => console.log('✅ Bot đã đăng nhập.'))
+  bot.on('login', () => console.log('✅ Bot đã đăng nhập'))
 
   bot.on('spawn', () => {
     setTimeout(() => {
@@ -25,6 +22,7 @@ function createBot() {
       setTimeout(() => bot.chat('/avn'), 2000)
     }, 3000)
 
+    // Anti AFK
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
@@ -32,13 +30,29 @@ function createBot() {
       bot.look(yaw, 0, true)
     }, 30000)
 
+    // Spam chat mỗi 10s
     setInterval(() => {
-      bot.chat('Trình')
-    }, 3000)
+      bot.chat('DITME')
+    }, 10000)
 
-    console.log('🚀 Anti-AFK, spam chat và mở rương đã kích hoạt.')
+    console.log('🚀 Bot đã sẵn sàng hoạt động.')
   })
 
+  // Tự click toàn bộ item khi GUI mở
+  bot.on('windowOpen', async (window) => {
+    for (let i = 0; i < window.slots.length; i++) {
+      const item = window.slots[i]
+      if (item) {
+        try {
+          await bot.clickWindow(i, 0, 0)
+          await new Promise(res => setTimeout(res, 500))
+        } catch {}
+      }
+    }
+    bot.closeWindow(window)
+  })
+
+  // Gửi chat từ Minecraft → Discord
   bot.on('chat', async (username, message) => {
     if (username === bot.username) return
     const embed = {
@@ -53,26 +67,13 @@ function createBot() {
     await sendToDiscord(embed)
   })
 
-  bot.on('windowOpen', async (window) => {
-    for (let i = 0; i < window.slots.length; i++) {
-      const item = window.slots[i]
-      if (item) {
-        try {
-          await bot.clickWindow(i, 0, 0)
-          await new Promise(res => setTimeout(res, 500))
-        } catch {}
-      }
-    }
-    bot.closeWindow(window)
-  })
-
   bot.on('end', () => {
-    console.log('🔁 Bot bị ngắt, đang kết nối lại...')
+    console.log('🔁 Mất kết nối, thử lại sau 10s...')
     setTimeout(createBot, 10000)
   })
 
   bot.on('error', err => console.error('❌ Lỗi bot:', err.message))
-  bot.on('kicked', reason => console.warn('⚠️ Bot bị kick:', reason))
+  bot.on('kicked', reason => console.warn('⚠️ Bị kick:', reason))
 }
 
 async function sendToDiscord(data) {
@@ -87,21 +88,8 @@ async function sendToDiscord(data) {
   }
 }
 
-// Nhận lệnh từ Discord qua Webhook (GET)
+// Express giữ bot online
 const app = express()
-app.use(express.json())
-
-app.post('/discord', (req, res) => {
-  const { username, content } = req.body
-  if (content && bot?.chat) {
-    bot.chat(`${username}: ${content}`)
-  }
-  res.sendStatus(200)
-})
-
 app.get('/', (req, res) => res.send('🟢 Bot đang hoạt động.'))
-
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🌐 Express đang chạy tại cổng ${PORT}`))
-
-
+app.listen(PORT, () => console.log(`🌐 Express chạy tại cổng ${PORT}`))
