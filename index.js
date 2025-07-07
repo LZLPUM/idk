@@ -20,7 +20,10 @@ function createBot() {
   bot.on('login', () => console.log('✅ Bot đã đăng nhập.'))
 
   bot.on('spawn', () => {
-    setTimeout(() => bot.chat('/login 03012001'), 3000)
+    setTimeout(() => {
+      bot.chat('/login 03012001')
+      setTimeout(() => bot.chat('/avn'), 2000)
+    }, 3000)
 
     setInterval(() => {
       bot.setControlState('jump', true)
@@ -30,10 +33,10 @@ function createBot() {
     }, 30000)
 
     setInterval(() => {
-      bot.chat('Rình Ai Tắm')
-    }, 10000)
+      bot.chat('Trình')
+    }, 3000)
 
-    console.log('🚀 Anti-AFK và spam chat đã kích hoạt.')
+    console.log('🚀 Anti-AFK, spam chat và mở rương đã kích hoạt.')
   })
 
   bot.on('chat', async (username, message) => {
@@ -60,6 +63,7 @@ function createBot() {
         } catch {}
       }
     }
+    bot.closeWindow(window)
   })
 
   bot.on('end', () => {
@@ -99,3 +103,5 @@ app.get('/', (req, res) => res.send('🟢 Bot đang hoạt động.'))
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`🌐 Express đang chạy tại cổng ${PORT}`))
+
+
