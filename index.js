@@ -1,9 +1,8 @@
 const mineflayer = require('mineflayer')
 const express = require('express')
+const fetch = require('node-fetch')
 const os = require('os')
-const { execSync } = require('child_process')
 const { Vec3 } = require('vec3')
-const { pathfinder, Movements, goals: { GoalBlock } } = require('mineflayer-pathfinder')
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 
@@ -18,38 +17,37 @@ function createBot() {
     keepAlive: true
   })
 
-  bot.loadPlugin(pathfinder)
-
   bot.on('login', () => console.log('✅ Bot đã đăng nhập.'))
 
   bot.on('spawn', () => {
     setTimeout(() => bot.chat('/login 03012001'), 3000)
-
-    const mcData = require('minecraft-data')(bot.version)
-    const defaultMove = new Movements(bot, mcData)
-    bot.pathfinder.setMovements(defaultMove)
-
-    setInterval(() => {
-      const xOffset = Math.floor(Math.random() * 1000 - 500)
-      const zOffset = Math.floor(Math.random() * 1000 - 500)
-      const goalPos = bot.entity.position.offset(xOffset, 0, zOffset)
-      bot.pathfinder.setGoal(new GoalBlock(goalPos.x, goalPos.y, goalPos.z))
-    }, 15000)
 
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
       const yaw = Math.random() * Math.PI * 2
       bot.look(yaw, 0, true)
-    }, 30000)
+    }, 3000)
 
-    console.log('🚀 Di chuyển zigzag đã kích hoạt.')
+    setInterval(() => {
+      bot.chat('Rình Ai Tắm')
+    }, 10000)
+
+    console.log('🚀 Anti-AFK và spam chat đã kích hoạt.')
   })
 
   bot.on('chat', async (username, message) => {
     if (username === bot.username) return
-    const formatted = `**${username}**: ${message}`
-    await sendToDiscord(formatted)
+    const embed = {
+      username: username,
+      avatar_url: `https://mc-heads.net/avatar/${username}`,
+      embeds: [{
+        title: username,
+        description: message,
+        color: 3447003
+      }]
+    }
+    await sendToDiscord(embed)
   })
 
   bot.on('windowOpen', async (window) => {
@@ -73,19 +71,33 @@ function createBot() {
   bot.on('kicked', reason => console.warn('⚠️ Bot bị kick:', reason))
 }
 
-async function sendToDiscord(message) {
+async function sendToDiscord(data) {
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: message })
+      body: JSON.stringify(data)
     })
   } catch (err) {
     console.error('Discord Error:', err.message)
   }
 }
 
+// Nhận lệnh từ Discord qua Webhook (GET)
 const app = express()
+app.use(express.json())
+
+app.post('/discord', (req, res) => {
+  const { username, content } = req.body
+  if (content && bot?.chat) {
+    bot.chat(`${username}: ${content}`)
+  }
+  res.sendStatus(200)
+})
+
 app.get('/', (req, res) => res.send('🟢 Bot đang hoạt động.'))
+
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`🌐 Express đang chạy tại cổng ${PORT}`))
+
+
