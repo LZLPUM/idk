@@ -63,7 +63,7 @@ function createBot() {
       setInterval(() => {
         bot.chat('MeMayBeo')
         console.log('Đã chat: MeMayBeo')
-      }, 3000)
+      }, 300000)
     }
   })
 
