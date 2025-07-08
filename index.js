@@ -64,7 +64,7 @@ function createBot() {
 
     // Chat quảng cáo mỗi 3 giây
     setInterval(() => {
-      bot.chat('Vote AdolfHitler')
+      bot.chat('MeMayBeo')
       console.log('Đã chat: 2y2c.org')
     }, 3000)
   })
