@@ -3,17 +3,14 @@ const express = require('express')
 const fetch = require('node-fetch')
 const os = require('os')
 const { execSync } = require('child_process')
-const { Client, GatewayIntentBits } = require('discord.js') // NEW: Discord bot
 
-// Telegram config
+// Cấu hình
 const TELEGRAM_BOT_TOKEN = '8184857901:AAGHLGeX5VUgRouxsmIXBPDV6Zl5KPqarkw'
 const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
-
-// Discord webhook
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
-const DISCORD_BOT_TOKEN = 'MTE0MDI0NzIxMjUyNjQwMzc2Nw.GrpGi_.Gq7xpFOy0iqmzJzubRhbLTBTkWyFEr0ol2Mix8' // ADD YOUR TOKEN
-const DISCORD_CHANNEL_ID = '1376389208075145269' // ADD YOUR CHANNEL ID
+
+const ENABLE_SPAM_CHAT = false // ← Bật/tắt spam quảng cáo
 
 let lastUpdateId = 0
 let chatBuffer = []
@@ -29,24 +26,21 @@ function createBot() {
     version: '1.12.2'
   })
 
-  bot.on('login', () => {
-    console.log('Đã kết nối vào server!')
-  })
+  bot.on('login', () => console.log('Đã kết nối vào server!'))
 
   bot.on('spawn', () => {
     console.log('Đăng ký và đăng nhập...')
     bot.chat('/register 03012001 03012001')
-
     setTimeout(() => {
       bot.chat('/login 03012001')
       console.log('Đã gửi /login')
-
       setTimeout(() => {
         bot.chat('/avn')
         console.log('Đã gửi /avn - chờ GUI mở...')
       }, 3000)
     }, 3000)
 
+    // Chống AFK
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
@@ -55,25 +49,29 @@ function createBot() {
       console.log('Đang hoạt động để tránh AFK...')
     }, 30000)
 
+    // Gửi tọa độ + thống kê hệ thống
     setInterval(async () => {
       if (!bot.entity) return
       const pos = bot.entity.position
-      const coords = `Tọa độ hiện tại:\nX: ${pos.x.toFixed(2)}\nY: ${pos.y.toFixed(2)}\nZ: ${pos.z.toFixed(2)}\nThời gian: ${new Date().toLocaleString('vi-VN')}`
+      const coords = `📍 Tọa độ hiện tại:\nX: ${pos.x.toFixed(2)}\nY: ${pos.y.toFixed(2)}\nZ: ${pos.z.toFixed(2)}\n🕒 ${new Date().toLocaleString('vi-VN')}`
       const stats = getSystemStats()
       await sendMessage(`${coords}\n\n${stats}`)
     }, 60000)
 
-    setInterval(() => {
-      bot.chat('')
-      console.log('Đã chat: 2y2c.org')
-    }, 3000000)
+    // Spam quảng cáo (nếu bật)
+    if (ENABLE_SPAM_CHAT) {
+      setInterval(() => {
+        bot.chat('MeMayBeo')
+        console.log('Đã chat: MeMayBeo')
+      }, 3000)
+    }
   })
 
-  bot.on('chat', async (username, message) => {
+  bot.on('chat', (username, message) => {
     if (username === bot.username) return
-    const text = message
-    console.log(`[${username}]: ${text}`)
-    await sendMessage(text, username)
+    const text = `[${username}]: ${message}`
+    console.log(text)
+    chatBuffer.push({ username, message })
   })
 
   bot.on('windowOpen', async (window) => {
@@ -97,13 +95,8 @@ function createBot() {
     setTimeout(createBot, 10000)
   })
 
-  bot.on('error', err => {
-    console.error('Lỗi bot:', err.message)
-  })
-
-  bot.on('kicked', reason => {
-    console.warn('Bot bị kick:', reason)
-  })
+  bot.on('error', err => console.error('Lỗi bot:', err.message))
+  bot.on('kicked', reason => console.warn('Bot bị kick:', reason))
 }
 
 function getSystemStats() {
@@ -116,26 +109,44 @@ function getSystemStats() {
     const dfOutput = execSync('df -h /').toString()
     const diskLine = dfOutput.split('\n')[1]
     const diskUsage = diskLine ? diskLine.split(/\s+/)[4] : 'N/A'
-
     const stats = [
-      `[System Stats - ${new Date().toLocaleString('vi-VN')}]`,
-      `RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB used / ${(totalMem / 1024 / 1024).toFixed(1)} MB total (${memUsagePercent.toFixed(1)}%)`,
-      `CPU Load (1m avg): ${cpuLoad.toFixed(2)}`,
-      `Disk Usage: ${diskUsage}`
+      `[📊 System Stats - ${new Date().toLocaleString('vi-VN')}]`,
+      `🧠 RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB used / ${(totalMem / 1024 / 1024).toFixed(1)} MB total (${memUsagePercent.toFixed(1)}%)`,
+      `⚙️ CPU Load (1m avg): ${cpuLoad.toFixed(2)}`,
+      `💽 Disk Usage: ${diskUsage}`
     ]
-
     return stats.join('\n')
   } catch (err) {
-    return `Không thể lấy thông tin hệ thống: ${err.message}`
+    return `❌ Không thể lấy thông tin hệ thống: ${err.message}`
   }
 }
 
-async function sendMessage(message, sender = 'BOT') {
+// Gửi message từ buffer đến Telegram & Discord
+setInterval(async () => {
+  if (chatBuffer.length === 0) return
+
+  const messages = chatBuffer.map(({ username, message }) => ({
+    username,
+    content: message
+  }))
+  chatBuffer = []
+
+  // Gộp Telegram
+  const telegramText = messages.map(m => `[${m.username}]: ${m.content}`).join('\n')
+  await sendMessage(telegramText)
+
+  // Gửi từng người vào Discord embed riêng
+  for (const msg of messages) {
+    await sendDiscordEmbed(msg.username, msg.content)
+  }
+}, logIntervalMs)
+
+async function sendMessage(message) {
   try {
     await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, text: `[${sender}]\n${message}` })
+      body: JSON.stringify({ chat_id: CHAT_ID, text: message })
     })
   } catch (err) {
     console.error('Lỗi gửi Telegram:', err.message)
@@ -145,22 +156,29 @@ async function sendMessage(message, sender = 'BOT') {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        embeds: [
-          {
-            title: sender,
-            description: message,
-            color: 0x00ffff,
-            footer: { text: 'Gửi từ Minecraft' },
-            timestamp: new Date().toISOString()
-          }
-        ],
-        username: sender,
-        avatar_url: `https://minotar.net/avatar/${sender}`
-      })
+      body: JSON.stringify({ content: message })
     })
   } catch (err) {
     console.error('Lỗi gửi Discord:', err.message)
+  }
+}
+
+async function sendDiscordEmbed(username, message) {
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [{
+          title: `💬 Tin nhắn từ ${username}`,
+          description: message,
+          color: 0x00AAFF,
+          timestamp: new Date().toISOString()
+        }]
+      })
+    })
+  } catch (err) {
+    console.error('Lỗi gửi embed Discord:', err.message)
   }
 }
 
@@ -187,32 +205,6 @@ async function checkTelegramMessages() {
 setInterval(checkTelegramMessages, 2000)
 
 const app = express()
-app.get('/', (req, res) => {
-  res.send('Còn cứu được')
-})
+app.get('/', (req, res) => res.send('Còn cứu được'))
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Server Express đang chạy trên cổng ${PORT}`)
-})
-
-const discordClient = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-})
-
-discordClient.on('ready', () => {
-  console.log(`✅ Discord bot đã kết nối: ${discordClient.user.tag}`)
-})
-
-discordClient.on('messageCreate', message => {
-  if (message.author.bot) return
-  if (message.channel.id !== DISCORD_CHANNEL_ID) return
-  const text = `${message.author.username}: ${message.content}`
-  if (bot?.chat) bot.chat(text)
-})
-
-discordClient.login(DISCORD_BOT_TOKEN)
-        
+app.listen(PORT, () => console.log(`Server Express đang chạy trên cổng ${PORT}`))
