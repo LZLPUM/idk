@@ -3,170 +3,146 @@ const express = require('express')
 const fetch = require('node-fetch')
 const os = require('os')
 const { execSync } = require('child_process')
-const { Vec3 } = require('vec3')
-const { pathfinder, Movements, goals: { GoalBlock } } = require('mineflayer-pathfinder')
-const { once } = require('events')
 
+// Telegram config
 const TELEGRAM_BOT_TOKEN = '8184857901:AAGHLGeX5VUgRouxsmIXBPDV6Zl5KPqarkw'
 const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
+
+// Discord webhook
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 
-const WATCHED_PLAYERS = ['lzlpum', 'AdolfHitler', 'nahiwinhaha2']
-const recentPlayers = new Set()
-let lastPosition = null
-let stuckTime = 0
-let chatBuffer = []
 let lastUpdateId = 0
+let chatBuffer = []
+let logIntervalMs = 5000
 let bot
 
 createBot()
 
 function createBot() {
   bot = mineflayer.createBot({
-    host: '2y2c.org',
+    host: 'anarchy.vn',
     username: 'nahiwinhaha',
-    version: '1.20.4',
-    keepAlive: true,
-    keepAliveInterval: 10000,
-    timeout: 60000
+    version: '1.12.2'
   })
 
-  bot.loadPlugin(pathfinder)
-
-  bot.on('login', () => console.log('✅ Bot đã đăng nhập vào server.'))
+  bot.on('login', () => {
+    console.log('Đã kết nối vào server!')
+  })
 
   bot.on('spawn', () => {
-    bot.chat('/login 03012001')
-    setTimeout(() => bot.chat('/avn'), 3000)
+    console.log('Đăng ký và đăng nhập...')
+    bot.chat('/register 03012001 03012001')
 
     setTimeout(() => {
-      const mcData = require('minecraft-data')(bot.version)
-      const defaultMove = new Movements(bot, mcData)
-      bot.pathfinder.setMovements(defaultMove)
+      bot.chat('/login 03012001')
+      console.log('Đã gửi /login')
 
-      // Di chuyển ziczac mỗi 15s
-      setInterval(() => {
-        if (!bot.entity) return
-        const xOffset = Math.floor(Math.random() * 200 - 100)
-        const zOffset = Math.floor(Math.random() * 200 - 100)
-        const goalPos = bot.entity.position.offset(xOffset, 0, zOffset)
-        bot.pathfinder.setGoal(new GoalBlock(goalPos.x, goalPos.y, goalPos.z))
-      }, 15000)
+      setTimeout(() => {
+        bot.chat('/avn')
+        console.log('Đã gửi /avn - chờ GUI mở...')
+      }, 3000)
+    }, 3000)
 
-      // Xoay đầu + nhảy định kỳ
-      setInterval(() => {
-        if (!bot.entity) return
-        bot.setControlState('jump', true)
-        setTimeout(() => bot.setControlState('jump', false), 300)
-        const yaw = Math.random() * Math.PI * 2
-        bot.look(yaw, 0, true)
-      }, 30000)
-
-      // Gửi tọa độ + hệ thống
-      setInterval(() => {
-        if (!bot.entity) return
-        const pos = bot.entity.position
-        const coords = `📍 Vị trí:\nX: ${pos.x.toFixed(1)}\nY: ${pos.y.toFixed(1)}\nZ: ${pos.z.toFixed(1)}`
-        const stats = getSystemStats()
-        sendMessage(`${coords}\n\n${stats}`)
-      }, 60000)
-
-      // Chat chống AFK
-      setInterval(() => {
-        if (bot.players[bot.username]?.entity) bot.chat('Ối Đồi Ơi')
-      }, 10000 + Math.floor(Math.random() * 3000))
-
-      console.log('🚀 Bắt đầu thực hiện các tính năng chính.')
+    // Chống AFK
+    setInterval(() => {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+      const yaw = Math.random() * Math.PI * 2
+      bot.look(yaw, 0, true)
+      console.log('Đang hoạt động để tránh AFK...')
     }, 30000)
+
+    // Gửi tọa độ + thống kê hệ thống mỗi phút
+    setInterval(async () => {
+      if (!bot.entity) return
+      const pos = bot.entity.position
+      const coords = `Tọa độ hiện tại:\nX: ${pos.x.toFixed(2)}\nY: ${pos.y.toFixed(2)}\nZ: ${pos.z.toFixed(2)}\nThời gian: ${new Date().toLocaleString('vi-VN')}`
+      const stats = getSystemStats()
+      await sendMessage(`${coords}\n\n${stats}`)
+    }, 60000)
+
+    // Chat quảng cáo mỗi 3 giây
+    setInterval(() => {
+      bot.chat('Vote AdolfHitler')
+      console.log('Đã chat: 2y2c.org')
+    }, 3000)
   })
 
-  // Nhận /w bot
   bot.on('chat', (username, message) => {
     if (username === bot.username) return
-    chatBuffer.push(`[${username}]: ${message}`)
-
-    const match = message.match(/^\/w\s+nahiwinhaha\s+(.+)/i)
-    if (match) {
-      const msg = match[1]
-      const coords = msg.match(/(-?\d+)\s+(-?\d+)/)
-      if (coords && bot.entity) {
-        const [ , x, z ] = coords
-        const y = bot.entity.position.y
-        bot.pathfinder.setGoal(new GoalBlock(parseInt(x), y, parseInt(z)))
-      } else {
-        if (bot.players[bot.username]?.entity) {
-          bot.chat(`/tell ${username} Đã nhận: ${msg}`)
-        }
-        sendMessage(`[PM từ ${username}]: ${msg}`)
-      }
-    }
+    const text = `[${username}]: ${message}`
+    console.log(text)
+    chatBuffer.push(text)
   })
 
-  // Tự động click GUI
   bot.on('windowOpen', async (window) => {
+    console.log(`GUI mở: ${window.title}`)
     for (let i = 0; i < window.slots.length; i++) {
       const item = window.slots[i]
       if (item) {
         try {
           await bot.clickWindow(i, 0, 0)
-          await new Promise(res => setTimeout(res, 300))
+          console.log(`Đã click slot ${i} (${item.displayName || item.name})`)
+          await new Promise(res => setTimeout(res, 500))
         } catch (err) {
-          console.log('❌ Click lỗi:', err.message)
-        }
+          console.log(`Lỗi khi click slot ${i}:`, err.message)
+_        }
       }
     }
   })
 
-  // Theo dõi người chơi quan trọng
-  bot.on('playerJoined', (player) => {
-    if (WATCHED_PLAYERS.includes(player.username)) {
-      recentPlayers.add(player.username)
-    }
-  })
-
-  // Gửi tọa độ cho người theo dõi
-  setInterval(() => {
-    if (!bot.entity) return
-    const pos = bot.entity.position
-    recentPlayers.forEach(username => {
-      if (bot.players[username]) {
-        bot.chat(`/tell ${username} Vị trí bot: X=${pos.x.toFixed(0)} Y=${pos.y.toFixed(0)} Z=${pos.z.toFixed(0)}`)
-      }
-    })
-  }, 30000)
-
-  // Kiểm tra đứng yên -> tự /kill
-  setInterval(() => {
-    if (!bot.entity) return
-    const pos = bot.entity.position
-    const key = `${pos.x.toFixed(1)}:${pos.y.toFixed(1)}:${pos.z.toFixed(1)}`
-    if (lastPosition === key) stuckTime++
-    else stuckTime = 0
-    lastPosition = key
-    if (stuckTime >= 20) {
-      if (bot.players[bot.username]?.entity) bot.chat('/kill')
-      stuckTime = 0
-    }
-  }, 30000)
-
+  // Tự động kết nối lại
   bot.on('end', () => {
-    console.log('🔁 Bot bị ngắt, thử kết nối lại sau 10s...')
+    console.log('Mất kết nối với server. Đang thử lại sau 10 giây...')
     setTimeout(createBot, 10000)
   })
 
-  bot.on('error', err => console.error('❌ Lỗi bot:', err.message))
-  bot.on('kicked', reason => console.warn('⚠️ Bot bị kick:', reason))
+  bot.on('error', err => {
+    console.error('Lỗi bot:', err.message)
+  })
+
+  bot.on('kicked', reason => {
+    console.warn('Bot bị kick:', reason)
+  })
 }
 
-// Gửi chat buffer lên Telegram/Discord mỗi 5s
+// Lấy thông tin hệ thống (RAM, CPU, Disk)
+function getSystemStats() {
+  try {
+    const totalMem = os.totalmem()
+    const freeMem = os.freemem()
+    const usedMem = totalMem - freeMem
+    const memUsagePercent = (usedMem / totalMem) * 100
+
+    const cpuLoad = os.loadavg()[0]
+
+    const dfOutput = execSync('df -h /').toString()
+    const diskLine = dfOutput.split('\n')[1]
+    const diskUsage = diskLine ? diskLine.split(/\s+/)[4] : 'N/A'
+
+    const stats = [
+      `[System Stats - ${new Date().toLocaleString('vi-VN')}]`,
+      `RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB used / ${(totalMem / 1024 / 1024).toFixed(1)} MB total (${memUsagePercent.toFixed(1)}%)`,
+      `CPU Load (1m avg): ${cpuLoad.toFixed(2)}`,
+      `Disk Usage: ${diskUsage}`
+    ]
+
+    return stats.join('\n')
+  } catch (err) {
+    return `Không thể lấy thông tin hệ thống: ${err.message}`
+  }
+}
+
+// Gửi tin nhắn đã gộp trong buffer đến Telegram và Discord mỗi 5 giây
 setInterval(async () => {
   if (chatBuffer.length === 0) return
-  const msg = chatBuffer.join('\n')
+  const message = chatBuffer.join('\n')
   chatBuffer = []
-  await sendMessage(msg)
-}, 5000)
+  await sendMessage(message)
+}, logIntervalMs)
 
+// Gửi message tới Telegram và Discord
 async function sendMessage(message) {
   try {
     await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
@@ -175,7 +151,7 @@ async function sendMessage(message) {
       body: JSON.stringify({ chat_id: CHAT_ID, text: message })
     })
   } catch (err) {
-    console.error('Telegram Error:', err.message)
+    console.error('Lỗi gửi Telegram:', err.message)
   }
 
   try {
@@ -185,30 +161,11 @@ async function sendMessage(message) {
       body: JSON.stringify({ content: message })
     })
   } catch (err) {
-    console.error('Discord Error:', err.message)
+    console.error('Lỗi gửi Discord:', err.message)
   }
 }
 
-function getSystemStats() {
-  try {
-    const totalMem = os.totalmem()
-    const freeMem = os.freemem()
-    const usedMem = totalMem - freeMem
-    const memPercent = (usedMem / totalMem) * 100
-    const cpu = os.platform() === 'win32' ? 0 : os.loadavg()[0]
-    const disk = execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4] || 'N/A'
-    return [
-      `[System Stats - ${new Date().toLocaleString('vi-VN')}]`,
-      `RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB / ${(totalMem / 1024 / 1024).toFixed(1)} MB (${memPercent.toFixed(1)}%)`,
-      `CPU: ${cpu.toFixed(2)} (1 phút)`,
-      `Disk: ${disk}`
-    ].join('\n')
-  } catch (err) {
-    return `Không thể lấy thông tin hệ thống: ${err.message}`
-  }
-}
-
-// Nhận tin nhắn Telegram
+// Nhận tin từ Telegram và gửi vào Minecraft
 async function checkTelegramMessages() {
   try {
     const res = await fetch(`${TELEGRAM_API_URL}/getUpdates?offset=${lastUpdateId + 1}`)
@@ -217,19 +174,27 @@ async function checkTelegramMessages() {
 
     for (const update of data.result) {
       lastUpdateId = update.update_id
-      const msg = update.message
-      if (!msg || !msg.text || msg.chat.id != CHAT_ID) continue
-      const text = msg.text.trim()
-      if (bot.players[bot.username]?.entity) bot.chat(text)
+      const message = update.message
+      if (!message || !message.text || message.chat.id != CHAT_ID) continue
+
+      const text = message.text.trim()
+      bot.chat(text)
+      console.log(`Đã nhận từ Telegram và gửi vào game: ${text}`)
     }
   } catch (err) {
-    console.error('Telegram polling error:', err.message)
+    console.error('Lỗi khi lấy tin nhắn Telegram:', err.message)
   }
 }
 
+// Kiểm tra tin nhắn Telegram mỗi 2 giây
 setInterval(checkTelegramMessages, 2000)
 
+// Server Express để giữ bot sống
 const app = express()
-app.get('/', (req, res) => res.send('🟢 Bot vẫn đang hoạt động.'))
+app.get('/', (req, res) => {
+  res.send('Còn cứu được')
+})
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🌐 Server Express đang chạy tại cổng ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`Server Express đang chạy trên cổng ${PORT}`)
+})
