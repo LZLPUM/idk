@@ -12,7 +12,7 @@ const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 
 // Discord webhook
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
-const DISCORD_BOT_TOKEN = 'MTE0MDI0NzIxMjUyNjQwMzc2Nw.GLDy1T.tMMcUvyAvop1vrcaYvDjvGrZNaTkmTio00LlYo' // ADD YOUR TOKEN
+const DISCORD_BOT_TOKEN = 'MTE0MDI0NzIxMjUyNjQwMzc2Nw.GrpGi_.Gq7xpFOy0iqmzJzubRhbLTBTkWyFEr0ol2Mix8' // ADD YOUR TOKEN
 const DISCORD_CHANNEL_ID = '1376389208075145269' // ADD YOUR CHANNEL ID
 
 let lastUpdateId = 0
