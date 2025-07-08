@@ -64,9 +64,9 @@ function createBot() {
     }, 60000)
 
     setInterval(() => {
-      bot.chat('MeMayBeo')
+      bot.chat('')
       console.log('Đã chat: 2y2c.org')
-    }, 3000000000)
+    }, 3000000)
   })
 
   bot.on('chat', async (username, message) => {
