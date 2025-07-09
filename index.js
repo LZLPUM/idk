@@ -61,7 +61,7 @@ function createBot() {
     // Spam quảng cáo (nếu bật)
     if (ENABLE_SPAM_CHAT) {
       setInterval(() => {
-        bot.chat('MeMayBeo')
+        bot.chat('Lon Me m địt phê lắm Haiduong15')
         console.log('Đã chat: MeMayBeo')
       }, 300000)
     }
