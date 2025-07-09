@@ -10,8 +10,7 @@ const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 
-const ENABLE_SPAM_CHAT = false // ← Bật/tắt spam quảng cáo
-
+const ENABLE_SPAM_CHAT = false
 let lastUpdateId = 0
 let chatBuffer = []
 let logIntervalMs = 5000
@@ -40,7 +39,6 @@ function createBot() {
       }, 3000)
     }, 3000)
 
-    // Chống AFK
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
@@ -49,7 +47,6 @@ function createBot() {
       console.log('Đang hoạt động để tránh AFK...')
     }, 30000)
 
-    // Gửi tọa độ + thống kê hệ thống
     setInterval(async () => {
       if (!bot.entity) return
       const pos = bot.entity.position
@@ -58,20 +55,18 @@ function createBot() {
       await sendMessage(`${coords}\n\n${stats}`)
     }, 60000)
 
-    // Spam quảng cáo (nếu bật)
     if (ENABLE_SPAM_CHAT) {
       setInterval(() => {
         bot.chat('')
-        console.log('Đã chat: MeMayBeo')
-      }, 30000)
+        console.log('Đã chat spam')
+      }, 300000)
     }
   })
 
   bot.on('chat', (username, message) => {
     if (username === bot.username) return
-    const text = `[${username}]: ${message}`
-    console.log(text)
     chatBuffer.push({ username, message })
+    console.log(`[${username}]: ${message}`)
   })
 
   bot.on('windowOpen', async (window) => {
@@ -109,33 +104,26 @@ function getSystemStats() {
     const dfOutput = execSync('df -h /').toString()
     const diskLine = dfOutput.split('\n')[1]
     const diskUsage = diskLine ? diskLine.split(/\s+/)[4] : 'N/A'
-    const stats = [
+    return [
       `[📊 System Stats - ${new Date().toLocaleString('vi-VN')}]`,
       `🧠 RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB used / ${(totalMem / 1024 / 1024).toFixed(1)} MB total (${memUsagePercent.toFixed(1)}%)`,
       `⚙️ CPU Load (1m avg): ${cpuLoad.toFixed(2)}`,
       `💽 Disk Usage: ${diskUsage}`
-    ]
-    return stats.join('\n')
+    ].join('\n')
   } catch (err) {
     return `❌ Không thể lấy thông tin hệ thống: ${err.message}`
   }
 }
 
-// Gửi message từ buffer đến Telegram & Discord
 setInterval(async () => {
   if (chatBuffer.length === 0) return
-
   const messages = chatBuffer.map(({ username, message }) => ({
     username,
     content: message
   }))
   chatBuffer = []
-
-  // Gộp Telegram
   const telegramText = messages.map(m => `[${m.username}]: ${m.content}`).join('\n')
   await sendMessage(telegramText)
-
-  // Gửi từng người vào Discord embed riêng
   for (const msg of messages) {
     await sendDiscordEmbed(msg.username, msg.content)
   }
@@ -187,27 +175,47 @@ async function checkTelegramMessages() {
     const res = await fetch(`${TELEGRAM_API_URL}/getUpdates?offset=${lastUpdateId + 1}`)
     const data = await res.json()
     if (!data.result) return
-
     for (const update of data.result) {
       lastUpdateId = update.update_id
       const message = update.message
       if (!message || !message.text || message.chat.id != CHAT_ID) continue
-
-      const text = message.text.trim()
-      bot.chat(text)
-      console.log(`Đã nhận từ Telegram và gửi vào game: ${text}`)
+      bot.chat(message.text.trim())
+      console.log(`Đã nhận từ Telegram và gửi vào game: ${message.text.trim()}`)
     }
   } catch (err) {
     console.error('Lỗi khi lấy tin nhắn Telegram:', err.message)
   }
 }
-
 setInterval(checkTelegramMessages, 2000)
 
 const app = express()
-app.get('/', (req, res) => res.send('Còn cứu được'))
 
-// 🔻 Thêm API điều khiển tại đây
+// 🔻 GIAO DIỆN HTML ĐIỀU KHIỂN
+app.get('/', (req, res) => {
+  res.send(`
+  <!DOCTYPE html><html><head><title>Điều khiển bot</title><meta name="viewport" content="width=device-width"><style>
+  body { background:#1e1e1e; color:white; font-family:sans-serif; max-width:500px; margin:auto; padding:20px }
+  input,button { width:100%; padding:10px; margin:10px 0; border:none; border-radius:5px; font-size:16px }
+  input { background:#2e2e2e; color:white }
+  button { background:#00bcd4; color:white; cursor:pointer }
+  pre { background:#2e2e2e; padding:10px; border-radius:6px; white-space:pre-wrap; word-wrap:break-word }
+  </style></head><body><h2>📱 Điều khiển Bot Minecraft</h2>
+  <input id="chat" placeholder="💬 Chat vào game"><button onclick="chat()">Gửi Chat</button>
+  <input id="command" placeholder="⌨️ Gửi lệnh"><button onclick="command()">Gửi Lệnh</button>
+  <button onclick="spam()">🔁 Bật/Tắt Spam</button>
+  <button onclick="coords()">📍 Xem tọa độ</button><pre id="coordsResult">...</pre>
+  <button onclick="tablist()">👥 Xem người chơi</button><pre id="tablistResult">...</pre>
+  <script>
+  async function chat(){const v=chat.value;if(!v)return;alert(await(await fetch('/chat?msg='+encodeURIComponent(v))).text())}
+  async function command(){const v=command.value;if(!v)return;alert(await(await fetch('/command?cmd='+encodeURIComponent(v))).text())}
+  async function spam(){alert(await(await fetch('/toggleSpam')).text())}
+  async function coords(){const r=await fetch('/coords');if(!r.ok)return alert(await r.text());coordsResult.innerText=JSON.stringify(await r.json(),null,2)}
+  async function tablist(){const r=await fetch('/tablist');if(!r.ok)return alert(await r.text());tablistResult.innerText=(await r.json()).join("\\n")}
+  </script></body></html>
+  `)
+})
+
+// 🔻 CÁC API
 app.get('/chat', (req, res) => {
   const msg = req.query.msg
   if (!msg || !bot) return res.send('Thiếu msg hoặc bot chưa sẵn sàng.')
@@ -229,8 +237,8 @@ app.get('/toggleSpam', (req, res) => {
   spamEnabled = !spamEnabled
   if (spamEnabled) {
     spamInterval = setInterval(() => {
-      bot.chat('Lon Me m địt phê lắm Haiduong15')
-    }, 3000)
+      bot.chat('')
+    }, 300000)
     res.send('✅ Đã BẬT spam chat.')
   } else {
     clearInterval(spamInterval)
@@ -239,17 +247,16 @@ app.get('/toggleSpam', (req, res) => {
 })
 
 app.get('/coords', (req, res) => {
-  if (!bot || !bot.entity) return res.send('Bot chưa spawn.')
+  if (!bot || !bot.entity) return res.status(500).send('Bot chưa spawn.')
   const pos = bot.entity.position
   res.json({ x: pos.x, y: pos.y, z: pos.z })
 })
 
 app.get('/tablist', (req, res) => {
-  if (!bot || !bot.players) return res.send('Bot chưa kết nối.')
+  if (!bot || !bot.players) return res.status(500).send('Bot chưa kết nối.')
   const players = Object.keys(bot.players)
   res.json(players)
 })
-// 🔺 Kết thúc API
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`Server Express đang chạy trên cổng ${PORT}`))
