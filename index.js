@@ -10,7 +10,7 @@ const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 
-const ENABLE_SPAM_CHAT = true // ← Bật/tắt spam quảng cáo
+const ENABLE_SPAM_CHAT = false // ← Bật/tắt spam quảng cáo
 
 let lastUpdateId = 0
 let chatBuffer = []
