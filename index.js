@@ -61,9 +61,9 @@ function createBot() {
     // Spam quảng cáo (nếu bật)
     if (ENABLE_SPAM_CHAT) {
       setInterval(() => {
-        bot.chat('Lon Me m địt phê lắm Haiduong15')
+        bot.chat('')
         console.log('Đã chat: MeMayBeo')
-      }, 3000)
+      }, 30000)
     }
   })
 
@@ -206,5 +206,50 @@ setInterval(checkTelegramMessages, 2000)
 
 const app = express()
 app.get('/', (req, res) => res.send('Còn cứu được'))
+
+// 🔻 Thêm API điều khiển tại đây
+app.get('/chat', (req, res) => {
+  const msg = req.query.msg
+  if (!msg || !bot) return res.send('Thiếu msg hoặc bot chưa sẵn sàng.')
+  bot.chat(msg)
+  res.send(`✅ Đã gửi chat: ${msg}`)
+})
+
+app.get('/command', (req, res) => {
+  const cmd = req.query.cmd
+  if (!cmd || !bot) return res.send('Thiếu cmd hoặc bot chưa sẵn sàng.')
+  bot.chat(cmd)
+  res.send(`✅ Đã gửi lệnh: ${cmd}`)
+})
+
+let spamEnabled = false
+let spamInterval
+app.get('/toggleSpam', (req, res) => {
+  if (!bot) return res.send('Bot chưa sẵn sàng.')
+  spamEnabled = !spamEnabled
+  if (spamEnabled) {
+    spamInterval = setInterval(() => {
+      bot.chat('Lon Me m địt phê lắm Haiduong15')
+    }, 3000)
+    res.send('✅ Đã BẬT spam chat.')
+  } else {
+    clearInterval(spamInterval)
+    res.send('⛔ Đã TẮT spam chat.')
+  }
+})
+
+app.get('/coords', (req, res) => {
+  if (!bot || !bot.entity) return res.send('Bot chưa spawn.')
+  const pos = bot.entity.position
+  res.json({ x: pos.x, y: pos.y, z: pos.z })
+})
+
+app.get('/tablist', (req, res) => {
+  if (!bot || !bot.players) return res.send('Bot chưa kết nối.')
+  const players = Object.keys(bot.players)
+  res.json(players)
+})
+// 🔺 Kết thúc API
+
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`Server Express đang chạy trên cổng ${PORT}`))
