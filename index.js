@@ -147,7 +147,7 @@ app.get('/', (req, res) => {
       body {
         background: linear-gradient(#000015, #000000);
         color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
-        background-image: url('https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=1500&q=80');
+        background-image: url('https://plus.unsplash.com/premium_photo-1666700698946-fbf7baa0134a?q=80&w=736&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
         background-size: cover;
         background-attachment: fixed;
       }
