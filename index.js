@@ -3,27 +3,15 @@ const express = require('express')
 const fetch = require('node-fetch')
 const os = require('os')
 const { execSync } = require('child_process')
-const fs = require('fs')
-const path = require('path')
 
-// Cấu hình
 const TELEGRAM_BOT_TOKEN = '8184857901:AAGHLGeX5VUgRouxsmIXBPDV6Zl5KPqarkw'
 const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 const PIN = '0301'
 
-const ENABLE_SPAM_CHAT = false
-let lastUpdateId = 0
-let chatBuffer = []
-let lastLogs = []
-let logIntervalMs = 5000
-let bot
-let botActive = true
-let spamEnabled = false
-let spamInterval
-
-createBot()
+let bot, botActive = true, spamEnabled = false, spamInterval
+let lastUpdateId = 0, chatBuffer = [], lastLogs = []
 
 function createBot() {
   bot = mineflayer.createBot({
@@ -31,8 +19,6 @@ function createBot() {
     username: 'nahiwinhaha',
     version: '1.12.2'
   })
-
-  bot.on('login', () => console.log('✅ Đã kết nối vào server!'))
 
   bot.on('spawn', () => {
     bot.chat('/register 03012001 03012001')
@@ -44,108 +30,75 @@ function createBot() {
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
-      const yaw = Math.random() * Math.PI * 2
-      bot.look(yaw, 0, true)
+      bot.look(Math.random() * Math.PI * 2, 0, true)
     }, 30000)
 
     setInterval(async () => {
       if (!bot.entity) return
-      const pos = bot.entity.position
-      const coords = `📍 Tọa độ:\nX: ${pos.x.toFixed(2)} Y: ${pos.y.toFixed(2)} Z: ${pos.z.toFixed(2)}\n🕒 ${new Date().toLocaleString('vi-VN')}`
+      const p = bot.entity.position
       const stats = getSystemStats()
-      await sendMessage(`${coords}\n\n${stats}`)
-    }, 6000000)
-
-    if (ENABLE_SPAM_CHAT) {
-      spamInterval = setInterval(() => {
-        bot.chat('')
-      }, 300000)
-    }
+      const msg = `📍 Tọa độ: X:${p.x.toFixed(1)} Y:${p.y.toFixed(1)} Z:${p.z.toFixed(1)}\n${stats}`
+      await sendMessage(msg)
+    }, 60000)
   })
 
-  bot.on('chat', (username, message) => {
+  bot.on('chat', (username, msg) => {
     if (username === bot.username) return
-    chatBuffer.push({ username, message })
-    lastLogs.push(`[${username}]: ${message}`)
+    chatBuffer.push({ username, msg })
+    lastLogs.push(`[${username}]: ${msg}`)
     if (lastLogs.length > 100) lastLogs.shift()
   })
 
-  bot.on('windowOpen', async (window) => {
+  bot.on('windowOpen', async window => {
     for (let i = 0; i < window.slots.length; i++) {
       const item = window.slots[i]
-      if (item) {
-        try {
-          await bot.clickWindow(i, 0, 0)
-          await new Promise(res => setTimeout(res, 500))
-        } catch (err) {}
-      }
+      if (item) try {
+        await bot.clickWindow(i, 0, 0)
+        await new Promise(r => setTimeout(r, 500))
+      } catch {}
     }
   })
 
   bot.on('end', () => {
-    console.log('❌ Mất kết nối. Đang thử lại...')
     if (botActive) setTimeout(createBot, 10000)
   })
-
-  bot.on('error', err => console.error('Lỗi bot:', err.message))
-  bot.on('kicked', reason => console.warn('Bot bị kick:', reason))
 }
-
-function getSystemStats() {
-  try {
-    const totalMem = os.totalmem(), freeMem = os.freemem()
-    const usedMem = totalMem - freeMem
-    const memUsagePercent = (usedMem / totalMem) * 100
-    const cpuLoad = os.loadavg()[0]
-    const dfOutput = execSync('df -h /').toString()
-    const diskLine = dfOutput.split('\n')[1]
-    const diskUsage = diskLine ? diskLine.split(/\s+/)[4] : 'N/A'
-    return [
-      `[📊 System Stats - ${new Date().toLocaleString('vi-VN')}]`,
-      `🧠 RAM: ${(usedMem / 1024 / 1024).toFixed(1)} MB / ${(totalMem / 1024 / 1024).toFixed(1)} MB (${memUsagePercent.toFixed(1)}%)`,
-      `⚙️ CPU Load: ${cpuLoad.toFixed(2)}`,
-      `💽 Disk Usage: ${diskUsage}`
-    ].join('\n')
-  } catch (err) {
-    return `❌ Lỗi thống kê hệ thống: ${err.message}`
-  }
-}
+createBot()
 
 setInterval(async () => {
   if (chatBuffer.length === 0) return
-  const messages = chatBuffer.map(({ username, message }) => ({ username, content: message }))
+  const text = chatBuffer.map(m => `[${m.username}]: ${m.msg}`).join('\n')
+  for (const m of chatBuffer) await sendDiscordEmbed(m.username, m.msg)
+  await sendMessage(text)
   chatBuffer = []
-  const telegramText = messages.map(m => `[${m.username}]: ${m.content}`).join('\n')
-  await sendMessage(telegramText)
-  for (const msg of messages) await sendDiscordEmbed(msg.username, msg.content)
-}, logIntervalMs)
+}, 5000)
 
-async function sendMessage(message) {
+async function sendMessage(msg) {
   try {
     await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, text: message })
+      body: JSON.stringify({ chat_id: CHAT_ID, text: msg })
     })
   } catch {}
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: message })
+      body: JSON.stringify({ content: msg })
     })
   } catch {}
 }
 
-async function sendDiscordEmbed(username, message) {
+async function sendDiscordEmbed(user, msg) {
   try {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         embeds: [{
-          title: `💬 Tin nhắn từ ${username}`,
-          description: message,
+          title: `💬 Từ ${user}`,
+          description: msg,
           color: 0x00AAFF,
           timestamp: new Date().toISOString()
         }]
@@ -154,29 +107,83 @@ async function sendDiscordEmbed(username, message) {
   } catch {}
 }
 
-async function checkTelegramMessages() {
+setInterval(async () => {
   try {
     const res = await fetch(`${TELEGRAM_API_URL}/getUpdates?offset=${lastUpdateId + 1}`)
     const data = await res.json()
     if (!data.result) return
     for (const update of data.result) {
       lastUpdateId = update.update_id
-      const msg = update.message
-      if (!msg || !msg.text || msg.chat.id != CHAT_ID) continue
-      bot.chat(msg.text.trim())
+      const m = update.message
+      if (!m || !m.text || m.chat.id != CHAT_ID) continue
+      bot.chat(m.text.trim())
     }
   } catch {}
+}, 2000)
+
+function getSystemStats() {
+  try {
+    const total = os.totalmem(), free = os.freemem()
+    const used = total - free
+    const cpu = os.loadavg()[0]
+    const disk = execSync('df -h /').toString().split('\n')[1]?.split(/\s+/)[4] || 'N/A'
+    return `🧠 RAM: ${(used / 1024 ** 2).toFixed(1)}MB / ${(total / 1024 ** 2).toFixed(1)}MB\n⚙️ CPU: ${cpu.toFixed(2)}\n💽 Disk: ${disk}`
+  } catch {
+    return `❌ Lỗi lấy hệ thống`
+  }
 }
-setInterval(checkTelegramMessages, 2000)
 
 const app = express()
-app.use(express.static(path.join(__dirname, 'public')))
 app.get('/', (req, res) => {
-  res.send(`<!DOCTYPE html>...`) // Rút gọn để không vượt giới hạn ký tự
+  const pin = req.query.pin
+  if (pin !== PIN) {
+    return res.send(`<form><input name="pin" placeholder="Mã PIN"/><button>Vào</button></form>`)
+  }
+  res.send(`
+    <h2>✅ Điều khiển bot</h2>
+    <form action="/chat"><input name="msg" placeholder="Tin nhắn"/><button>Gửi</button></form>
+    <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt' : '✅ Bật'} spam</button></form>
+    <form action="/disconnect"><button>❌ Ngắt bot</button></form>
+    <form action="/reconnect"><button>🔁 Kết nối lại bot</button></form>
+    <form action="/chatlog"><button>Xem log chat</button></form>
+  `)
 })
 
-// Các route Express khác như /chat, /toggleSpam, /disconnect, /reconnect, /chatlog vẫn giữ nguyên
+app.get('/chat', (req, res) => {
+  const msg = req.query.msg
+  if (!bot || !msg) return res.send('Bot chưa sẵn sàng.')
+  bot.chat(msg)
+  res.send(`✅ Đã gửi: ${msg}`)
+})
+
+app.get('/toggleSpam', (req, res) => {
+  if (!bot) return res.send('Bot chưa sẵn sàng.')
+  spamEnabled = !spamEnabled
+  if (spamEnabled) {
+    spamInterval = setInterval(() => bot.chat('Memaybeo'), 3000)
+  } else {
+    clearInterval(spamInterval)
+  }
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/disconnect', (req, res) => {
+  bot.quit()
+  botActive = false
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/reconnect', (req, res) => {
+  if (!botActive) {
+    botActive = true
+    createBot()
+  }
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/chatlog', (req, res) => {
+  res.send(`<pre>${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
+})
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🌐 Server web chạy tại cổng ${PORT}`))
-        
+app.listen(PORT, () => console.log(`🌐 Web bot chạy tại cổng ${PORT}`))
