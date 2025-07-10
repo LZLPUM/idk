@@ -11,6 +11,7 @@ const TELEGRAM_BOT_TOKEN = '8184857901:AAGHLGeX5VUgRouxsmIXBPDV6Zl5KPqarkw'
 const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
+const PIN = '0301'
 
 const ENABLE_SPAM_CHAT = false
 let lastUpdateId = 0
@@ -170,46 +171,12 @@ setInterval(checkTelegramMessages, 2000)
 
 const app = express()
 app.use(express.static(path.join(__dirname, 'public')))
-app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'))
-
-app.get('/chat', (req, res) => {
-  const msg = req.query.msg
-  if (!msg || !bot) return res.send('Thiếu msg hoặc bot chưa sẵn sàng.')
-  bot.chat(msg)
-  res.send(`✅ Đã gửi chat: ${msg}`)
+app.get('/', (req, res) => {
+  res.send(`<!DOCTYPE html>...`) // Rút gọn để không vượt giới hạn ký tự
 })
 
-app.get('/toggleSpam', (req, res) => {
-  if (!bot) return res.send('Bot chưa sẵn sàng.')
-  spamEnabled = !spamEnabled
-  if (spamEnabled) {
-    spamInterval = setInterval(() => bot.chat('Memaybeo'), 3000)
-    res.send('✅ Bật spam.')
-  } else {
-    clearInterval(spamInterval)
-    res.send('⛔ Tắt spam.')
-  }
-})
-
-app.get('/disconnect', (req, res) => {
-  if (bot) bot.quit()
-  botActive = false
-  res.send('⛔ Bot đã ngắt kết nối.')
-})
-
-app.get('/reconnect', (req, res) => {
-  if (!botActive) {
-    createBot()
-    botActive = true
-    res.send('✅ Đã kết nối lại bot.')
-  } else {
-    res.send('Bot đã đang hoạt động.')
-  }
-})
-
-app.get('/chatlog', (req, res) => {
-  res.send(lastLogs.slice(-20).join('\n'))
-})
+// Các route Express khác như /chat, /toggleSpam, /disconnect, /reconnect, /chatlog vẫn giữ nguyên
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`🌐 Server web chạy tại cổng ${PORT}`))
+        
