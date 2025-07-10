@@ -137,15 +137,30 @@ const app = express()
 app.get('/', (req, res) => {
   const pin = req.query.pin
   if (pin !== PIN) {
-    return res.send(`<form><input name="pin" placeholder="Mã PIN"/><button>Vào</button></form>`)
+    return res.send(`
+      <style>
+        body { background:#000 url('https://images.unsplash.com/photo-1602526212643-680feaf4c1b1?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; text-align:center; padding-top:20vh }
+        input, button { padding:10px 15px; border-radius:10px; border:none; font-size:16px }
+      </style>
+      <form>
+        <h2>🔒 Nhập mã PIN</h2>
+        <input name="pin" placeholder="PIN"/> <button>Vào</button>
+      </form>
+    `)
   }
   res.send(`
-    <h2>✅ Điều khiển bot</h2>
-    <form action="/chat"><input name="msg" placeholder="Tin nhắn"/><button>Gửi</button></form>
-    <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt' : '✅ Bật'} spam</button></form>
+    <style>
+      body { background:#000 url('https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; padding:30px }
+      form, pre { margin:10px 0 }
+      button, input { padding:10px 15px; border:none; border-radius:8px; font-size:15px }
+      a { color:#0ff; text-decoration:none }
+    </style>
+    <h1>🚀 Điều khiển Bot Minecraft</h1>
+    <form action="/chat"><input name="msg" placeholder="Tin nhắn"/><button>💬 Gửi</button></form>
+    <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt spam' : '✅ Bật spam'}</button></form>
     <form action="/disconnect"><button>❌ Ngắt bot</button></form>
     <form action="/reconnect"><button>🔁 Kết nối lại bot</button></form>
-    <form action="/chatlog"><button>Xem log chat</button></form>
+    <form action="/chatlog"><button>📜 Xem log chat</button></form>
   `)
 })
 
@@ -153,7 +168,7 @@ app.get('/chat', (req, res) => {
   const msg = req.query.msg
   if (!bot || !msg) return res.send('Bot chưa sẵn sàng.')
   bot.chat(msg)
-  res.send(`✅ Đã gửi: ${msg}`)
+  res.redirect('/?pin=' + PIN)
 })
 
 app.get('/toggleSpam', (req, res) => {
@@ -182,8 +197,8 @@ app.get('/reconnect', (req, res) => {
 })
 
 app.get('/chatlog', (req, res) => {
-  res.send(`<pre>${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
+  res.send(`<pre style="background:#000;color:#0f0;padding:20px">${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🌐 Web bot chạy tại cổng ${PORT}`))
+app.listen(PORT, () => console.log(`🌐 Giao diện bot đang chạy tại cổng ${PORT}`))
