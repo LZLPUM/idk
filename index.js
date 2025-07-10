@@ -139,23 +139,31 @@ app.get('/', (req, res) => {
   if (pin !== PIN) {
     return res.send(`
       <style>
-        body { background:#000 url('https://images.unsplash.com/photo-1602526212643-680feaf4c1b1?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; text-align:center; padding-top:20vh }
+        body { background:#000 url('https://wallpapercosmos.com/w/full/6/f/6/1257646-3840x2160-desktop-4k-space-background-image.jpg') center/cover fixed; color:white; font-family:sans-serif; text-align:center; padding-top:20vh }
         input, button { padding:10px 15px; border-radius:10px; border:none; font-size:16px }
       </style>
       <form>
         <h2>🔒 Nhập mã PIN</h2>
-        <input name="pin" placeholder="PIN"/> <button>Vào</button>
+        <input name="pin" placeholder="PIN"/><button>Vào</button>
       </form>
     `)
   }
+
+  const players = bot?.players ? Object.keys(bot.players).join(', ') : 'Đang tải...'
+
   res.send(`
     <style>
-      body { background:#000 url('https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; padding:30px }
+      body { background:#000 url('https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; padding:30px; animation: bgmove 60s infinite linear }
       form, pre { margin:10px 0 }
       button, input { padding:10px 15px; border:none; border-radius:8px; font-size:15px }
       a { color:#0ff; text-decoration:none }
+      @keyframes bgmove {
+        0% { background-position: 0 0 }
+        100% { background-position: 1000px 0 }
+      }
     </style>
     <h1>🚀 Điều khiển Bot Minecraft</h1>
+    <p>🧑‍🤝‍🧑 Người chơi online: <b>${players}</b></p>
     <form action="/chat"><input name="msg" placeholder="Tin nhắn"/><button>💬 Gửi</button></form>
     <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt spam' : '✅ Bật spam'}</button></form>
     <form action="/disconnect"><button>❌ Ngắt bot</button></form>
