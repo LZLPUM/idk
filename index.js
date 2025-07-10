@@ -137,39 +137,59 @@ const app = express()
 app.get('/', (req, res) => {
   const pin = req.query.pin
   if (pin !== PIN) {
-    return res.send(`
-      <style>
-        body { background:#000 url('https://wallpapercosmos.com/w/full/6/f/6/1257646-3840x2160-desktop-4k-space-background-image.jpg') center/cover fixed; color:white; font-family:sans-serif; text-align:center; padding-top:20vh }
-        input, button { padding:10px 15px; border-radius:10px; border:none; font-size:16px }
-      </style>
-      <form>
-        <h2>🔒 Nhập mã PIN</h2>
-        <input name="pin" placeholder="PIN"/><button>Vào</button>
-      </form>
-    `)
+    return res.send(`<form><input name="pin" placeholder="🔐 Nhập mã PIN"/><button>Vào</button></form>`)
   }
 
-  const players = bot?.players ? Object.keys(bot.players).join(', ') : 'Đang tải...'
-
+  const players = bot?.players ? Object.keys(bot.players).map(p => `<li>${p}</li>`).join('') : '<li>Đang tải...</li>'
   res.send(`
+    <html><head><title>Bot Controller</title>
     <style>
-      body { background:#000 url('https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?auto=format&fit=crop&w=1500&q=80') center/cover fixed; color:white; font-family:sans-serif; padding:30px; animation: bgmove 60s infinite linear }
-      form, pre { margin:10px 0 }
-      button, input { padding:10px 15px; border:none; border-radius:8px; font-size:15px }
-      a { color:#0ff; text-decoration:none }
-      @keyframes bgmove {
-        0% { background-position: 0 0 }
-        100% { background-position: 1000px 0 }
+      body {
+        background: linear-gradient(#000015, #000000);
+        color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
+        background-image: url('https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=1500&q=80');
+        background-size: cover;
+        background-attachment: fixed;
+      }
+      input, button {
+        padding: 10px; margin: 5px;
+        border-radius: 8px; border: none;
+      }
+      button {
+        background: #222; color: white;
+        border: 1px solid #0ff;
+      }
+      ul { list-style: none; padding: 0 }
+      li { padding: 2px 0; }
+      .panel {
+        background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; display: inline-block;
       }
     </style>
-    <h1>🚀 Điều khiển Bot Minecraft</h1>
-    <p>🧑‍🤝‍🧑 Người chơi online: <b>${players}</b></p>
-    <form action="/chat"><input name="msg" placeholder="Tin nhắn"/><button>💬 Gửi</button></form>
-    <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt spam' : '✅ Bật spam'}</button></form>
-    <form action="/disconnect"><button>❌ Ngắt bot</button></form>
-    <form action="/reconnect"><button>🔁 Kết nối lại bot</button></form>
-    <form action="/chatlog"><button>📜 Xem log chat</button></form>
+    </head><body>
+      <div class="panel">
+        <h1>🚀 Điều khiển Bot Minecraft</h1>
+        <h3>🧑‍🤝‍🧑 Người chơi online:</h3>
+        <ul id="players">${players}</ul>
+        <form action="/chat"><input name="msg" placeholder="💬 Tin nhắn"/><button>Gửi</button></form><br>
+        <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt spam' : '✅ Bật spam'}</button></form><br>
+        <form action="/disconnect"><button>❌ Ngắt bot</button></form><br>
+        <form action="/reconnect"><button>🔁 Kết nối lại bot</button></form><br>
+        <form action="/chatlog"><button>📜 Xem log chat</button></form>
+      </div>
+      <script>
+        setInterval(() => {
+          fetch('/tablist').then(res => res.json()).then(data => {
+            document.getElementById('players').innerHTML = data.map(p => '<li>' + p + '</li>').join('')
+          })
+        }, 10000)
+      </script>
+    </body></html>
   `)
+})
+
+app.get('/tablist', (req, res) => {
+  const list = bot?.players ? Object.keys(bot.players) : []
+  res.json(list)
 })
 
 app.get('/chat', (req, res) => {
@@ -205,8 +225,8 @@ app.get('/reconnect', (req, res) => {
 })
 
 app.get('/chatlog', (req, res) => {
-  res.send(`<pre style="background:#000;color:#0f0;padding:20px">${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
+  res.send(`<pre>${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🌐 Giao diện bot đang chạy tại cổng ${PORT}`))
+app.listen(PORT, () => console.log(`🌐 Web bot chạy tại cổng ${PORT}`))
