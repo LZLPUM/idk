@@ -147,7 +147,7 @@ app.get('/', (req, res) => {
       body {
         background: linear-gradient(#000015, #000000);
         color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
-        background-image: url('https://pin.it/4hwxwzNvL');
+        background-image: url('https://unsplash.com/fr/photos/une-voiture-peinte-avec-des-personnages-danime-dessus-4aE2enR5M8s');
         background-size: cover;
         background-attachment: fixed;
       }
