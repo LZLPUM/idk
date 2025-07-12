@@ -148,7 +148,7 @@ app.get('/', (req, res) => {
     <style>
       body {
         background: linear-gradient(#000015, #000000);
-        background-image: url('https://i.imgur.com/n9z3sLg.jpeg');
+        background-image: url('https://imgur.com/gallery/anime-recommendations-GVG1B');
         background-size: cover;
         background-attachment: fixed;
         color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
