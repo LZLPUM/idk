@@ -30,7 +30,9 @@ function createBot() {
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
-      bot.look(Math.random() * Math.PI * 2, 0, true)
+      if (bot.entity && bot.entity.yaw !== undefined) {
+        bot.look(Math.random() * Math.PI * 2, 0, true)
+      }
     }, 30000)
 
     setInterval(async () => {
@@ -146,10 +148,10 @@ app.get('/', (req, res) => {
     <style>
       body {
         background: linear-gradient(#000015, #000000);
-        color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
-        background-image: url('https://imgur.com/gallery/anime-anime-6fBbf');
+        background-image: url('https://i.imgur.com/n9z3sLg.jpeg');
         background-size: cover;
         background-attachment: fixed;
+        color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
       }
       input, button {
         padding: 10px; margin: 5px;
