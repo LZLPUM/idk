@@ -21,13 +21,11 @@ function createBot() {
   })
 
   bot.on('spawn', () => {
-    // Spam login + register trong 10 giây đầu
     let loginInterval = setInterval(() => {
-      bot.chat('/register 03012001 03012001') // Nếu bot đã đăng ký, có thể xóa dòng này
+      bot.chat('/register 03012001 03012001')
       bot.chat('/login 03012001')
     }, 2000)
 
-    // Sau 10 giây thì dừng spam và gửi /avn
     setTimeout(() => {
       clearInterval(loginInterval)
       bot.chat('/avn')
@@ -124,7 +122,9 @@ setInterval(async () => {
       lastUpdateId = update.update_id
       const m = update.message
       if (!m || !m.text || m.chat.id != CHAT_ID) continue
-      bot.chat(m.text.trim())
+      if (bot && bot.chat && typeof bot.chat === 'function') {
+        bot.chat(m.text.trim())
+      }
     }
   } catch {}
 }, 2000)
@@ -201,8 +201,10 @@ app.get('/tablist', (req, res) => {
 
 app.get('/chat', (req, res) => {
   const msg = req.query.msg
-  if (!bot || !msg) return res.send('Bot chưa sẵn sàng.')
-  bot.chat(msg)
+  if (!bot || !bot.chat || typeof bot.chat !== 'function') {
+    return res.send('⚠️ Bot chưa sẵn sàng để chat.')
+  }
+  if (msg) bot.chat(msg)
   res.redirect('/?pin=' + PIN)
 })
 
@@ -218,7 +220,7 @@ app.get('/toggleSpam', (req, res) => {
 })
 
 app.get('/disconnect', (req, res) => {
-  bot.quit()
+  if (bot) bot.quit()
   botActive = false
   res.redirect('/?pin=' + PIN)
 })
@@ -235,5 +237,5 @@ app.get('/chatlog', (req, res) => {
   res.send(`<pre>${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 10000
 app.listen(PORT, () => console.log(`🌐 Web bot chạy tại cổng ${PORT}`))
