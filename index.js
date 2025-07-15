@@ -21,11 +21,17 @@ function createBot() {
   })
 
   bot.on('spawn', () => {
-    bot.chat('/register 03012001 03012001')
-    setTimeout(() => {
+    // Spam login + register trong 10 giây đầu
+    let loginInterval = setInterval(() => {
+      bot.chat('/register 03012001 03012001') // Nếu bot đã đăng ký, có thể xóa dòng này
       bot.chat('/login 03012001')
-      setTimeout(() => bot.chat('/avn'), 3000)
-    }, 3000)
+    }, 2000)
+
+    // Sau 10 giây thì dừng spam và gửi /avn
+    setTimeout(() => {
+      clearInterval(loginInterval)
+      bot.chat('/avn')
+    }, 10000)
 
     setInterval(() => {
       bot.setControlState('jump', true)
@@ -148,7 +154,6 @@ app.get('/', (req, res) => {
     <style>
       body {
         background: linear-gradient(#000015, #000000);
-        background-image: url('https://imgur.com/gallery/anime-recommendations-GVG1B');
         background-size: cover;
         background-attachment: fixed;
         color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
