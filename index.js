@@ -17,8 +17,8 @@ function createBot() {
   console.log('🟡 Bot đang khởi động...')
 
   bot = mineflayer.createBot({
-    host: 'play.nekocraft.net',
-    port: 25565,
+    host: '2y2c.org',
+    //port: 25565,
     username: 'nahiwinhaha',
     version: '1.12.2'
   })
