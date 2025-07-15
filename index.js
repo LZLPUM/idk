@@ -14,44 +14,27 @@ let bot, botActive = true, spamEnabled = false, spamInterval
 let lastUpdateId = 0, chatBuffer = [], lastLogs = []
 
 function createBot() {
-  console.log('🟡 Bot đang khởi động...')
-
   bot = mineflayer.createBot({
     host: '2y2c.org',
-    //port: 25565,
     username: 'nahiwinhaha',
     version: '1.12.2'
   })
 
-  bot.on('login', () => {
-    console.log('🔐 Bot đã đăng nhập xong Minecraft!')
-  })
-
   bot.on('spawn', () => {
-    console.log('✅ Bot đã vào server thành công!')
-
     let loginInterval = setInterval(() => {
-      if (bot && bot.chat && typeof bot.chat === 'function') {
-        console.log('📨 Gửi lệnh /register + /login')
-        bot.chat('/register 03012001 03012001')
-        bot.chat('/login 03012001')
-      }
-    }, 5000)
+      bot.chat('/register 03012001 03012001')
+      bot.chat('/login 03012001')
+    }, 2000)
 
     setTimeout(() => {
       clearInterval(loginInterval)
-      if (bot && bot.chat && typeof bot.chat === 'function') {
-        console.log('📨 Gửi lệnh /avn sau khi login')
-        bot.chat('/avn')
-      }
-    }, 15000)
+      bot.chat('/avn')
+    }, 10000)
 
     setInterval(() => {
-      if (!bot.entity) return
-      console.log('↕️ Anti-AFK nhảy lên')
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 300)
-      if (bot.entity.yaw !== undefined) {
+      if (bot.entity && bot.entity.yaw !== undefined) {
         bot.look(Math.random() * Math.PI * 2, 0, true)
       }
     }, 30000)
@@ -61,47 +44,214 @@ function createBot() {
       const p = bot.entity.position
       const stats = getSystemStats()
       const msg = `📍 Tọa độ: X:${p.x.toFixed(1)} Y:${p.y.toFixed(1)} Z:${p.z.toFixed(1)}\n${stats}`
-      console.log('📡 Gửi toạ độ về Telegram/Discord')
       await sendMessage(msg)
     }, 60000)
   })
 
   bot.on('chat', (username, msg) => {
     if (username === bot.username) return
-    console.log(`[💬 Ingame] ${username}: ${msg}`)
     chatBuffer.push({ username, msg })
     lastLogs.push(`[${username}]: ${msg}`)
     if (lastLogs.length > 100) lastLogs.shift()
   })
 
   bot.on('windowOpen', async window => {
-    console.log('📦 Mở GUI - Auto click')
     for (let i = 0; i < window.slots.length; i++) {
       const item = window.slots[i]
       if (item) try {
         await bot.clickWindow(i, 0, 0)
         await new Promise(r => setTimeout(r, 500))
-      } catch (err) {
-        console.log('❌ Lỗi click GUI:', err)
-      }
+      } catch {}
     }
   })
 
-  bot.on('end', () => {
-    console.log('🔁 Bot bị ngắt kết nối.')
-    if (botActive) setTimeout(() => {
-      console.log('🔄 Đang thử kết nối lại...')
-      createBot()
-    }, 10000)
+  bot.on('kicked', async (reason, loggedIn) => {
+    const msg = `⛔ Bot bị kick khỏi máy chủ:\n${reason}`
+    lastLogs.push(msg)
+    if (lastLogs.length > 100) lastLogs.shift()
+    await sendMessage(msg)
   })
 
-  bot.on('kicked', (reason) => {
-    console.log('⛔ Bot bị kick khỏi server:', reason)
+  bot.on('error', async err => {
+    const msg = `❌ Lỗi bot:\n${err.message || err}`
+    lastLogs.push(msg)
+    if (lastLogs.length > 100) lastLogs.shift()
+    await sendMessage(msg)
   })
 
-  bot.on('error', (err) => {
-    console.log('❌ Bot gặp lỗi:', err)
+  bot.on('end', async () => {
+    const msg = `🔁 Bot đã ngắt kết nối. Đang cố gắng kết nối lại sau 10 giây...`
+    lastLogs.push(msg)
+    if (lastLogs.length > 100) lastLogs.shift()
+    await sendMessage(msg)
+    if (botActive) setTimeout(createBot, 10000)
   })
 }
-
 createBot()
+
+setInterval(async () => {
+  if (chatBuffer.length === 0) return
+  const text = chatBuffer.map(m => `[${m.username}]: ${m.msg}`).join('\n')
+  for (const m of chatBuffer) await sendDiscordEmbed(m.username, m.msg)
+  await sendMessage(text)
+  chatBuffer = []
+}, 5000)
+
+async function sendMessage(msg) {
+  try {
+    await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, text: msg })
+    })
+  } catch {}
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: msg })
+    })
+  } catch {}
+}
+
+async function sendDiscordEmbed(user, msg) {
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [{
+          title: `💬 Từ ${user}`,
+          description: msg,
+          color: 0x00AAFF,
+          timestamp: new Date().toISOString()
+        }]
+      })
+    })
+  } catch {}
+}
+
+setInterval(async () => {
+  try {
+    const res = await fetch(`${TELEGRAM_API_URL}/getUpdates?offset=${lastUpdateId + 1}`)
+    const data = await res.json()
+    if (!data.result) return
+    for (const update of data.result) {
+      lastUpdateId = update.update_id
+      const m = update.message
+      if (!m || !m.text || m.chat.id != CHAT_ID) continue
+      if (bot && bot.chat && typeof bot.chat === 'function') {
+        bot.chat(m.text.trim())
+      }
+    }
+  } catch {}
+}, 2000)
+
+function getSystemStats() {
+  try {
+    const total = os.totalmem(), free = os.freemem()
+    const used = total - free
+    const cpu = os.loadavg()[0]
+    const disk = execSync('df -h /').toString().split('\n')[1]?.split(/\s+/)[4] || 'N/A'
+    return `🧠 RAM: ${(used / 1024 ** 2).toFixed(1)}MB / ${(total / 1024 ** 2).toFixed(1)}MB\n⚙️ CPU: ${cpu.toFixed(2)}\n💽 Disk: ${disk}`
+  } catch {
+    return `❌ Lỗi lấy hệ thống`
+  }
+}
+
+const app = express()
+app.get('/', (req, res) => {
+  const pin = req.query.pin
+  if (pin !== PIN) {
+    return res.send(`<form><input name="pin" placeholder="🔐 Nhập mã PIN"/><button>Vào</button></form>`)
+  }
+
+  const players = bot?.players ? Object.keys(bot.players).map(p => `<li>${p}</li>`).join('') : '<li>Đang tải...</li>'
+  res.send(`<html><head><title>Bot Controller</title>
+  <style>
+    body {
+      background: linear-gradient(#000015, #000000);
+      background-size: cover;
+      background-attachment: fixed;
+      color: #fff; font-family: sans-serif; text-align: center; padding: 20px;
+    }
+    input, button {
+      padding: 10px; margin: 5px;
+      border-radius: 8px; border: none;
+    }
+    button {
+      background: #222; color: white;
+      border: 1px solid #0ff;
+    }
+    ul { list-style: none; padding: 0 }
+    li { padding: 2px 0; }
+    .panel {
+      background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; display: inline-block;
+    }
+  </style>
+  </head><body>
+  <div class="panel">
+  <h1>🚀 Điều khiển Bot Minecraft</h1>
+  <h3>🧑‍🤝‍🧑 Người chơi online:</h3>
+  <ul id="players">${players}</ul>
+  <form action="/chat"><input name="msg" placeholder="💬 Tin nhắn"/><button>Gửi</button></form><br>
+  <form action="/toggleSpam"><button>${spamEnabled ? '⛔ Tắt spam' : '✅ Bật spam'}</button></form><br>
+  <form action="/disconnect"><button>❌ Ngắt bot</button></form><br>
+  <form action="/reconnect"><button>🔁 Kết nối lại bot</button></form><br>
+  <form action="/chatlog"><button>📜 Xem log chat</button></form>
+  </div>
+  <script>
+    setInterval(() => {
+      fetch('/tablist').then(res => res.json()).then(data => {
+        document.getElementById('players').innerHTML = data.map(p => '<li>' + p + '</li>').join('')
+      })
+    }, 10000)
+  </script>
+  </body></html>`)
+})
+
+app.get('/tablist', (req, res) => {
+  const list = bot?.players ? Object.keys(bot.players) : []
+  res.json(list)
+})
+
+app.get('/chat', (req, res) => {
+  const msg = req.query.msg
+  if (!bot || !bot.chat || typeof bot.chat !== 'function') {
+    return res.send('⚠️ Bot chưa sẵn sàng để chat.')
+  }
+  if (msg) bot.chat(msg)
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/toggleSpam', (req, res) => {
+  if (!bot) return res.send('Bot chưa sẵn sàng.')
+  spamEnabled = !spamEnabled
+  if (spamEnabled) {
+    spamInterval = setInterval(() => bot.chat('Memaybeo'), 3000)
+  } else {
+    clearInterval(spamInterval)
+  }
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/disconnect', (req, res) => {
+  if (bot) bot.quit()
+  botActive = false
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/reconnect', (req, res) => {
+  if (!botActive) {
+    botActive = true
+    createBot()
+  }
+  res.redirect('/?pin=' + PIN)
+})
+
+app.get('/chatlog', (req, res) => {
+  res.send(`<pre>${lastLogs.slice(-30).join('\n')}</pre><a href="/?pin=${PIN}">🔙 Quay lại</a>`)
+})
+
+const PORT = process.env.PORT || 10000
+app.listen(PORT, () => console.log(`🌐 Web bot chạy tại cổng ${PORT}`))
