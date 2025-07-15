@@ -3,12 +3,17 @@ const express = require('express')
 const fetch = require('node-fetch')
 const os = require('os')
 const { execSync } = require('child_process')
+const { SocksProxyAgent } = require('socks-proxy-agent')
 
 const TELEGRAM_BOT_TOKEN = '8184857901:AAGHLGeX5VUgRouxsmIXBPDV6Zl5KPqarkw'
 const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 const PIN = '0301'
+
+// ⚠️ Thay đổi địa chỉ proxy SOCKS5 tại đây nếu muốn:
+const proxy = 'socks5://96.126.96.163:9090'
+const agent = new SocksProxyAgent(proxy)
 
 let bot, botActive = true, spamEnabled = false, spamInterval
 let lastUpdateId = 0, chatBuffer = [], lastLogs = []
@@ -17,11 +22,12 @@ function createBot() {
   bot = mineflayer.createBot({
     host: '2y2c.org',
     username: 'nahiwinhaha',
-    version: '1.12.2'
+    version: '1.12.2',
+    agent // 💡 dùng proxy tại đây
   })
 
   bot.on('spawn', () => {
-    let loginInterval = setInterval(() => {
+    const loginInterval = setInterval(() => {
       bot.chat('/register 03012001 03012001')
       bot.chat('/login 03012001')
     }, 2000)
@@ -65,7 +71,7 @@ function createBot() {
     }
   })
 
-  bot.on('kicked', async (reason, loggedIn) => {
+  bot.on('kicked', async (reason) => {
     const msg = `⛔ Bot bị kick khỏi máy chủ:\n${reason}`
     lastLogs.push(msg)
     if (lastLogs.length > 100) lastLogs.shift()
