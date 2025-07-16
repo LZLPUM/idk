@@ -12,7 +12,7 @@ const CHAT_ID = '6790410023'
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 const PIN = '0301'
-const USE_PROXY = true // ✅ Bật/tắt proxy tại đây
+const USE_PROXY = false // ✅ Bật/tắt proxy tại đây
 const PROXY_URL = 'socks5://96.126.96.163:9090'
 
 const agent = USE_PROXY ? new SocksProxyAgent(PROXY_URL) : undefined
