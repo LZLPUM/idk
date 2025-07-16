@@ -11,7 +11,6 @@ const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1376391242576957562/2cmM6ySlCSlbSvYMIn_jVQ6zZLGH6OLx5LLhuzDNh4mxFdHNQSqgRnKcaNvilZ-m8HSe'
 const PIN = '0301'
 
-// ⚠️ Thay đổi địa chỉ proxy SOCKS5 tại đây nếu muốn:
 const proxy = 'socks5://96.126.96.163:9090'
 const agent = new SocksProxyAgent(proxy)
 
@@ -23,7 +22,7 @@ function createBot() {
     host: '2y2c.org',
     username: 'nahiwinhaha',
     version: '1.12.2',
-    agent // 💡 dùng proxy tại đây
+    agent
   })
 
   bot.on('spawn', () => {
@@ -34,7 +33,9 @@ function createBot() {
 
     setTimeout(() => {
       clearInterval(loginInterval)
-      bot.chat('/avn')
+      try {
+        bot.chat('/avn')
+      } catch {}
     }, 10000)
 
     setInterval(() => {
@@ -146,8 +147,19 @@ setInterval(async () => {
       lastUpdateId = update.update_id
       const m = update.message
       if (!m || !m.text || m.chat.id != CHAT_ID) continue
-      if (bot && bot.chat && typeof bot.chat === 'function') {
-        bot.chat(m.text.trim())
+
+      if (
+        bot && bot.chat && typeof bot.chat === 'function' &&
+        bot._client && bot._client.state === 'play' &&
+        bot.player && bot.player.username
+      ) {
+        try {
+          bot.chat(m.text.trim())
+        } catch (err) {
+          console.error('❌ Lỗi khi bot chat từ Telegram:', err)
+        }
+      } else {
+        console.warn('⚠️ Bot chưa sẵn sàng để nhận lệnh chat từ Telegram.')
       }
     }
   } catch {}
@@ -166,6 +178,7 @@ function getSystemStats() {
 }
 
 const app = express()
+
 app.get('/', (req, res) => {
   const pin = req.query.pin
   if (pin !== PIN) {
@@ -223,18 +236,40 @@ app.get('/tablist', (req, res) => {
 
 app.get('/chat', (req, res) => {
   const msg = req.query.msg
-  if (!bot || !bot.chat || typeof bot.chat !== 'function') {
+  if (
+    !bot || !bot.chat || typeof bot.chat !== 'function' ||
+    !bot._client || bot._client.state !== 'play' ||
+    !bot.player || !bot.player.username
+  ) {
     return res.send('⚠️ Bot chưa sẵn sàng để chat.')
   }
-  if (msg) bot.chat(msg)
+  try {
+    if (msg) bot.chat(msg)
+  } catch (err) {
+    console.error('❌ Lỗi khi chat từ web:', err)
+    return res.send('❌ Lỗi khi bot chat.')
+  }
   res.redirect('/?pin=' + PIN)
 })
 
 app.get('/toggleSpam', (req, res) => {
-  if (!bot) return res.send('Bot chưa sẵn sàng.')
+  if (
+    !bot || !bot.chat || typeof bot.chat !== 'function' ||
+    !bot._client || bot._client.state !== 'play' ||
+    !bot.player || !bot.player.username
+  ) {
+    return res.send('⚠️ Bot chưa sẵn sàng để spam.')
+  }
+
   spamEnabled = !spamEnabled
   if (spamEnabled) {
-    spamInterval = setInterval(() => bot.chat('Memaybeo'), 3000)
+    spamInterval = setInterval(() => {
+      try {
+        bot.chat('Memaybeo')
+      } catch (err) {
+        console.error('❌ Lỗi khi spam chat:', err)
+      }
+    }, 3000)
   } else {
     clearInterval(spamInterval)
   }
