@@ -20,7 +20,7 @@ let lastUpdateId = 0, chatBuffer = [], lastLogs = []
 function createBot() {
   bot = mineflayer.createBot({
     host: '2y2c.org',
-    username: 'nahiwinhaha',
+    username: 'nahiwinhaha3',
     version: '1.12.2',
     agent
   })
